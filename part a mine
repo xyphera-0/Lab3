@@ -1,0 +1,83 @@
+////////////////////////////////////////////////////////////////////////
+//** ENGR-2350 Template Project 
+//** NAME: Gizelle Ojeda-Ericksen
+//** RIN: 662065015
+//** This is the base project for several activities and labs throughout
+//** the course.  The outline provided below isn't necessarily *required*
+//** by a C program; however, this format is required within ENGR-2350
+//** to ease debugging/grading by the staff.
+////////////////////////////////////////////////////////////////////////
+
+// We'll always add this include statement. This basically takes the
+// code contained within the "engr_2350_msp432.h" file and adds it here.
+#include "engr2350_msp432.h"
+
+// Add function prototypes here as needed.
+void CCR_ISR();
+
+
+// Add global variables here as needed.
+uint32_t setpoint;
+//right
+int32_t enc_counts_track_right; // A variable to track timer counts between encoder edges <-- Done in Activity 10
+int32_t count_right;
+int32_t wheelSpeed_right; // A variable to store summation of wheel speed (timer counts) measurements <-- For averaging
+int32_t measurementSum_right//A variable to track number of measurements in the summation variable     <-- For averaging
+int32_t PWM_right; //A variable to store the current PWM (or can be read from CCR)
+//left
+int32_t enc_counts_track_left; // A variable to track timer counts between encoder edges <-- Done in Activity 10
+int32_t count_left;
+int32_t wheelSpeed_left; // A variable to store summation of wheel speed (timer counts) measurements <-- For averaging
+int32_t measurementSum_left//A variable to track number of measurements in the summation variable     <-- For averaging
+int32_t PWM_left;
+
+int main( void ) {    /** Main Function ****/
+  
+    // Add local variables here as needed.
+
+    // We always call the SysInit function first to set up the 
+    // microcontroller for how we are going to use it.
+    SysInit();
+
+    // Place initialization code (or run-once) code here
+
+    while( 1 ) {  
+        // Place code that runs continuously in here
+
+    }   
+}    /** End Main Function ****/   
+
+// Add function declarations here as needed
+void CCR_ISR() {
+    enc_counts_track_right = Timer_A_getCaptureCompareCount(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
+    measurementSum_right += enc_counts_track_right;
+    count_right +=1;
+    if(count_right == 12){
+        if((count_right/12) > setpoint){
+            PWM_right -=1;
+        }else if((count_right/12) < setpoint){
+            PWM_right +=1;
+        }
+        //apply PWM value
+        //reset sum tracking variable
+        count_right = 0;
+        //reset sum veriable
+        enc_count_right = 0;
+    }
+//    enc_counts_track_right_left = Timer_A_getCaptureCompareCount(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
+//        measurementSum_left += enc_counts_track_left;
+//        count_left +=1;
+//        if(count_left == 12){
+//            if((count_left/12) < setpoint){
+//                PWM_left -=1;
+//            }else if((count_left/12) < setpoint){
+//                PWM_left +=1;
+//            }
+//            //apply PWM value
+//            //reset sum tracking variable
+//            count_left = 0;
+//            //reset sum veriable
+//            enc_count_left = 0;
+//        }
+}
+// Add interrupt functions last so they are easy to find
