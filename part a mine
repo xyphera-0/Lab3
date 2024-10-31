@@ -20,7 +20,8 @@ void Timer_Init();
 
 // Add global variables here as needed.
 uint32_t setpoint = 65000;
-Timer_A_ContinuousModeConfig config;
+Timer_A_ContinuousModeConfig configencoder;
+Timer_A_ContinuousModeConfig configPWM;
 Timer_A_CompareModeConfig comright;
 Timer_A_CaptureModeConfig capright;
 
@@ -72,17 +73,21 @@ void GPIO_Init(){
     //10.4 right wheel encoder
     GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P10, GPIO_PIN4, GPIO_PRIMARY_MODULE_FUNCTION);
       //10.5 left wheel encoder
-     GPIO_setAsPeripheralModuleFunctionOutputPin(GPIO_PORT_P10, GPIO_PIN5, GPIO_PRIMARY_MODULE_FUNCTION);
+     GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P10, GPIO_PIN5, GPIO_PRIMARY_MODULE_FUNCTION);
 
 }
 
 void Timer_Init(){
-   config.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
-   config.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
-   config.timerInterruptEnable_TAIE = TIMER_A_TAIE_INTERRUPT_ENABLE; //innterup enable
+   configencoder.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+   configencoder.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+   configencoder.timerInterruptEnable_TAIE = TIMER_A_TAIE_INTERRUPT_ENABLE; //innterup enable
    Timer_A_configureContinuousMode(TIMER_A3_BASE, &config);
    Timer_A_configureContinuousMode(TIMER_A0_BASE, &config);
 
+   configPWM.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+   configPWM.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+   configPWM.timerPeriod = 2400; //elapses every 100ms
+   Timer_A_configureUpMode(TIMER_A0_BASE, &configPWM);
 
    //right
    comright.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_3;
@@ -90,7 +95,7 @@ void Timer_Init(){
    //inter dis
    //campore out set reset
    comright.compareOutputMode = TIMER_A_OUTPUTMODE_SET_RESET;
-   comright.compareValue=setpoint;
+   comright.compareValue= 400 ;
    //call the compare function
    Timer_A_initCompare(TIMER_A0_BASE, &comright);
 
@@ -107,6 +112,7 @@ void Timer_Init(){
 }
 
 void CCR_ISR() {
+    printf("test\r\n");
     enc_counts_track_right = Timer_A_getCaptureCompareCount(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
     measurementSum_right += enc_counts_track_right;
     count_right +=1;
