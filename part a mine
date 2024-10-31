@@ -14,21 +14,27 @@
 
 // Add function prototypes here as needed.
 void CCR_ISR();
+void GPIO_Init();
+void Timer_Init();
 
 
 // Add global variables here as needed.
-uint32_t setpoint;
+uint32_t setpoint = 65000;
+Timer_A_ContinuousModeConfig config;
+Timer_A_CompareModeConfig comright;
+Timer_A_CaptureModeConfig capright;
+
 //right
 int32_t enc_counts_track_right; // A variable to track timer counts between encoder edges <-- Done in Activity 10
 int32_t count_right;
 int32_t wheelSpeed_right; // A variable to store summation of wheel speed (timer counts) measurements <-- For averaging
-int32_t measurementSum_right//A variable to track number of measurements in the summation variable     <-- For averaging
+int32_t measurementSum_right;//A variable to track number of measurements in the summation variable     <-- For averaging
 int32_t PWM_right; //A variable to store the current PWM (or can be read from CCR)
 //left
 int32_t enc_counts_track_left; // A variable to track timer counts between encoder edges <-- Done in Activity 10
 int32_t count_left;
 int32_t wheelSpeed_left; // A variable to store summation of wheel speed (timer counts) measurements <-- For averaging
-int32_t measurementSum_left//A variable to track number of measurements in the summation variable     <-- For averaging
+int32_t measurementSum_left;//A variable to track number of measurements in the summation variable     <-- For averaging
 int32_t PWM_left;
 
 int main( void ) {    /** Main Function ****/
@@ -38,9 +44,10 @@ int main( void ) {    /** Main Function ****/
     // We always call the SysInit function first to set up the 
     // microcontroller for how we are going to use it.
     SysInit();
-
+    GPIO_Init();
+   Timer_Init();
     // Place initialization code (or run-once) code here
-
+    printf("Lab 3 Part A \r\n");
     while( 1 ) {  
         // Place code that runs continuously in here
 
@@ -48,6 +55,48 @@ int main( void ) {    /** Main Function ****/
 }    /** End Main Function ****/   
 
 // Add function declarations here as needed
+void GPIO_Init(){
+    GPIO_setAsOutputPin(GPIO_PORT_P3, GPIO_PIN7); //3.7 left motor on
+    GPIO_setAsOutputPin(GPIO_PORT_P3, GPIO_PIN6); //3.6 right motor on
+    GPIO_setAsOutputPin(GPIO_PORT_P5, GPIO_PIN4); //5.4 left direction
+    GPIO_setAsOutputPin(GPIO_PORT_P5, GPIO_PIN5); //5.5 right direction
+
+    GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN7);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN6);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN4);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN5);
+
+    GPIO_setAsPeripheralModuleFunctionOutputPin(GPIO_PORT_P2, GPIO_PIN7, GPIO_PRIMARY_MODULE_FUNCTION); //2.7 Left PWM
+    GPIO_setAsPeripheralModuleFunctionOutputPin(GPIO_PORT_P2, GPIO_PIN6, GPIO_PRIMARY_MODULE_FUNCTION); //2.6 Right PWM
+    
+    GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P10, GPIO_PIN4, GPIO_PRIMARY_MODULE_FUNCTION);
+      //10.5 left wheel encoder
+     // GPIO_setAsPeripheralModuleFunctionOutputPin(GPIO_PORT_P10, GPIO_PIN5, GPIO_PRIMARY_MODULE_FUNCTION);
+
+}
+
+void Timer_Init(){
+   config.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+   config.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+   config. //innterup enable
+   //timer 3 and 0
+   
+   //right
+   comright.compareRegister = TIMER_A_CAPTURE_REGISTER_3;
+   //inter dis
+   //campore out set reset 
+   //call the compare function
+   
+   capright.captureRegister = TIMER_A_CAPTURECOMPARE_REGESTER_0;
+   //cap mode
+   //input selest A
+   //synch
+   //interr enable
+   //call the capture funtion   
+   Timer_A_registerInterrupt(TIMER_A3_BASE, TIMER_A_CCR0_INTERRUPT, CCR_ISR);
+       Timer_A_registerInterrupt(TIMER_A3_BASE, TIMER_A_CCRX_AND_OVERFLOW_INTERRUPT,CCR_ISR);
+}
+
 void CCR_ISR() {
     enc_counts_track_right = Timer_A_getCaptureCompareCount(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
     measurementSum_right += enc_counts_track_right;
@@ -62,7 +111,7 @@ void CCR_ISR() {
         //reset sum tracking variable
         count_right = 0;
         //reset sum veriable
-        enc_count_right = 0;
+        enc_counts_track_right = 0;
     }
 //    enc_counts_track_right_left = Timer_A_getCaptureCompareCount(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
 //        measurementSum_left += enc_counts_track_left;
