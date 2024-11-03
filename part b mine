@@ -76,9 +76,9 @@ int main( void ) {    /** Main Function ****/
         }else if(!BMP5){
             __delay_cycles(240e3);
             printf("Path I\r\n");
-            while(!BMP1){
-                Driver(pathA);
-                BMP1 = GPIO_getInputPinValue(GPIO_PORT_P4,GPIO_PIN2);
+            while(!BMP5){
+                Driver(pathI);
+                BMP5 = GPIO_getInputPinValue(GPIO_PORT_P4,GPIO_PIN2);
            }
             __delay_cycles(240e3);
         }
@@ -221,7 +221,18 @@ void CCR_ISR() {
     }
 }
 
-void Driver(){
-
+void Driver(uint16_t path){
+    uint8_t i;
+    for(i=0; i <=9; i++) {
+        if((i==0) || ((i % 2) == 0) ){
+            //distance needs to traveled
+            //drive straight
+            printf("straight\r\n");
+        }else{
+            //angle needed to turn
+            //turn left wheel high
+            printf("turn\r\n");
+        }
+    }
 }
 // Add interrupt functions last so they are easy to find
