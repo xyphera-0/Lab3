@@ -1,0 +1,227 @@
+////////////////////////////////////////////////////////////////////////
+//** ENGR-2350 Template Project 
+//** NAME: Gizelle Ojeda-Ericksen
+//** RIN: 662065015
+//** This is the base project for several activities and labs throughout
+//** the course.  The outline provided below isn't necessarily *required*
+//** by a C program; however, this format is required within ENGR-2350
+//** to ease debugging/grading by the staff.
+////////////////////////////////////////////////////////////////////////
+
+// We'll always add this include statement. This basically takes the
+// code contained within the "engr_2350_msp432.h" file and adds it here.
+#include "engr2350_msp432.h"
+
+// Add function prototypes here as needed.
+void CCR_ISR();
+void GPIO_Init();
+void Timer_Init();
+void Drive();
+
+
+// Add global variables here as needed.
+uint32_t setpoint = 65000;
+Timer_A_ContinuousModeConfig configencoder;
+Timer_A_UpModeConfig configPWM;
+Timer_A_CompareModeConfig comright;
+Timer_A_CaptureModeConfig capright;
+Timer_A_CompareModeConfig comleft;
+Timer_A_CaptureModeConfig capleft;
+
+//right
+int32_t enc_counts_track_right; // A variable to track timer counts between encoder edges <-- Done in Activity 10
+int32_t count_right;
+int32_t wheelSpeed_right; // A variable to store summation of wheel speed (timer counts) measurements <-- For averaging
+int32_t measurementSum_right;//A variable to track number of measurements in the summation variable     <-- For averaging
+int32_t PWM_right; //A variable to store the current PWM (or can be read from CCR)
+//left
+int32_t enc_counts_track_left; // A variable to track timer counts between encoder edges <-- Done in Activity 10
+int32_t count_left;
+int32_t wheelSpeed_left; // A variable to store summation of wheel speed (timer counts) measurements <-- For averaging
+int32_t measurementSum_left;//A variable to track number of measurements in the summation variable     <-- For averaging
+int32_t PWM_left;
+
+//part b
+uint8_t BMP0, BMP5;
+
+//paths
+uint16_t pathR[9] = {...};
+uint16_t pathI[9] = {...};
+
+
+int main( void ) {    /** Main Function ****/
+  
+    // Add local variables here as needed.
+
+    // We always call the SysInit function first to set up the 
+    // microcontroller for how we are going to use it.
+    SysInit();
+    GPIO_Init();
+   Timer_Init();
+    // Place initialization code (or run-once) code here
+    printf("Lab 3 Part b \r\n");
+    while( 1 ) {  
+        // Place code that runs continuously in here
+        BMP0 = GPIO_getInputPinValue(GPIO_PORT_P4,GPIO_PIN0);
+        BMP5 = GPIO_getInputPinValue(GPIO_PORT_P4,GPIO_PIN7);
+        if(!BMP0){
+            __delay_cycles(240e3);
+            printf("The R path\r\n");
+            while(!BMP0){
+               Driver(pathR);
+               BMP0 = GPIO_getInputPinValue(GPIO_PORT_P4,GPIO_PIN0);
+           }
+            __delay_cycles(240e3);
+
+        }else if(!BMP5){
+            __delay_cycles(240e3);
+            printf("Path I\r\n");
+            while(!BMP1){
+                Driver(pathA);
+                BMP1 = GPIO_getInputPinValue(GPIO_PORT_P4,GPIO_PIN2);
+           }
+            __delay_cycles(240e3);
+        }
+
+
+    }   
+}    /** End Main Function ****/   
+
+// Add function declarations here as needed
+void GPIO_Init(){
+    GPIO_setAsOutputPin(GPIO_PORT_P3, GPIO_PIN7); //3.7 left motor on
+    GPIO_setAsOutputPin(GPIO_PORT_P3, GPIO_PIN6); //3.6 right motor on
+    GPIO_setAsOutputPin(GPIO_PORT_P5, GPIO_PIN4); //5.4 left direction
+    GPIO_setAsOutputPin(GPIO_PORT_P5, GPIO_PIN5); //5.5 right direction
+
+    GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN7);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN6);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN4);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P5, GPIO_PIN5);
+
+    GPIO_setAsPeripheralModuleFunctionOutputPin(GPIO_PORT_P2, GPIO_PIN7, GPIO_PRIMARY_MODULE_FUNCTION); //2.7 Left PWM
+    GPIO_setAsPeripheralModuleFunctionOutputPin(GPIO_PORT_P2, GPIO_PIN6, GPIO_PRIMARY_MODULE_FUNCTION); //2.6 Right PWM
+
+    //10.4 right wheel encoder
+    GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P10, GPIO_PIN4, GPIO_PRIMARY_MODULE_FUNCTION);
+      //10.5 left wheel encoder
+     GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P10, GPIO_PIN5, GPIO_PRIMARY_MODULE_FUNCTION);
+
+     //bumper 0 and 5
+     GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P4, GPIO_PIN0 | GPIO_PIN7);
+     BMP0 = GPIO_getInputPinValue(GPIO_PORT_P4,GPIO_PIN0); // for R
+     BMP5 = GPIO_getInputPinValue(GPIO_PORT_P4,GPIO_PIN7); // for I
+     __delay_cycles(240e3);
+
+}
+
+void Timer_Init(){
+   configencoder.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+   configencoder.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+   configencoder.timerInterruptEnable_TAIE = TIMER_A_TAIE_INTERRUPT_ENABLE; //innterup enable
+   configencoder.timerClear = TIMER_A_DO_CLEAR;
+   Timer_A_configureContinuousMode(TIMER_A3_BASE, &configencoder);
+
+   configPWM.clockSource = TIMER_A_CLOCKSOURCE_SMCLK;
+   configPWM.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_1;
+   configPWM.timerPeriod = 2400; //elapses every 100ms
+   configPWM.timerClear = TIMER_A_DO_CLEAR;
+   Timer_A_configureUpMode(TIMER_A0_BASE, &configPWM);
+
+   //right
+   comright.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_3;
+   comright.compareInterruptEnable = TIMER_A_CAPTURECOMPARE_INTERRUPT_DISABLE;
+   //inter dis
+   //campore out set reset
+   comright.compareOutputMode = TIMER_A_OUTPUTMODE_SET_RESET;
+   comright.compareValue= 200 ;
+   //call the compare function
+   Timer_A_initCompare(TIMER_A0_BASE, &comright);
+
+
+   capright.captureRegister = TIMER_A_CAPTURECOMPARE_REGISTER_0;
+   capright.captureMode = TIMER_A_CAPTUREMODE_RISING_EDGE;
+   capright.captureInputSelect = TIMER_A_CAPTURE_INPUTSELECT_CCIxA;
+   capright.synchronizeCaptureSource = TIMER_A_CAPTURE_SYNCHRONOUS;
+   capright.captureInterruptEnable = TIMER_A_CAPTURECOMPARE_INTERRUPT_ENABLE;
+   Timer_A_initCapture(TIMER_A3_BASE, &capright);
+
+   //left
+  comleft.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_4;
+  comleft.compareInterruptEnable = TIMER_A_CAPTURECOMPARE_INTERRUPT_DISABLE;
+  //inter dis
+  //campore out set reset
+  comleft.compareOutputMode = TIMER_A_OUTPUTMODE_SET_RESET;
+  comleft.compareValue= 200 ;
+  //call the compare function
+  Timer_A_initCompare(TIMER_A0_BASE, &comleft);
+
+
+  capleft.captureRegister = TIMER_A_CAPTURECOMPARE_REGISTER_1;
+  capleft.captureMode = TIMER_A_CAPTUREMODE_RISING_EDGE;
+  capleft.captureInputSelect = TIMER_A_CAPTURE_INPUTSELECT_CCIxA;
+  capleft.synchronizeCaptureSource = TIMER_A_CAPTURE_SYNCHRONOUS;
+  capleft.captureInterruptEnable = TIMER_A_CAPTURECOMPARE_INTERRUPT_ENABLE;
+  Timer_A_initCapture(TIMER_A3_BASE, &capleft);
+
+   Timer_A_registerInterrupt(TIMER_A3_BASE, TIMER_A_CCR0_INTERRUPT, CCR_ISR);
+   Timer_A_registerInterrupt(TIMER_A3_BASE, TIMER_A_CCRX_AND_OVERFLOW_INTERRUPT,CCR_ISR);
+
+   Timer_A_startCounter(TIMER_A0_BASE, TIMER_A_UP_MODE);
+   Timer_A_startCounter(TIMER_A3_BASE, TIMER_A_CONTINUOUS_MODE);
+}
+
+void CCR_ISR() {
+    if(Timer_A_getEnabledInterruptStatus( TIMER_A3_BASE ) & TIMER_A_INTERRUPT_PENDING) {
+            Timer_A_clearInterruptFlag(TIMER_A3_BASE);
+            enc_counts_track_right += 65536;
+            enc_counts_track_left += 65536;
+    }
+
+    // update right side
+    if (Timer_A_getCaptureCompareEnabledInterruptStatus(TIMER_A3_BASE,TIMER_A_CAPTURECOMPARE_REGISTER_0) & TIMER_A_CAPTURECOMPARE_INTERRUPT_FLAG) {
+        Timer_A_clearCaptureCompareInterrupt(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
+        enc_counts_track_right = Timer_A_getCaptureCompareCount(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
+        measurementSum_right += enc_counts_track_right;
+        count_right +=1;
+        if(count_right == 12){
+            if((count_right/12) > setpoint){
+                PWM_right -=1;
+            }else if((count_right/12) < setpoint){
+                PWM_right +=1;
+            }
+            //apply PWM value
+            Timer_A_setCompareValue(TIMER_A0_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_3, &PWM_right);
+            //reset sum tracking variable
+            count_right = 0;
+            //reset sum veriable
+            enc_counts_track_right = 0;
+        }
+    }
+
+    // update left side
+    if (Timer_A_getCaptureCompareEnabledInterruptStatus(TIMER_A3_BASE,TIMER_A_CAPTURECOMPARE_REGISTER_1) & TIMER_A_CAPTURECOMPARE_INTERRUPT_FLAG) {
+        Timer_A_clearCaptureCompareInterrupt(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_1);
+        enc_counts_track_left = Timer_A_getCaptureCompareCount(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_1);
+        measurementSum_left += enc_counts_track_left;
+        count_left +=1;
+        if(count_left == 12){
+            if((count_left/12) < setpoint){
+                PWM_left -=1;
+            }else if((count_left/12) < setpoint){
+                PWM_left +=1;
+            }
+            //apply PWM value
+            Timer_A_setCompareValue(TIMER_A0_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_4, &PWM_left);
+            //reset sum tracking variable
+            count_left = 0;
+            //reset sum veriable
+            enc_counts_track_left = 0;
+        }
+    }
+}
+
+void Driver(){
+
+}
+// Add interrupt functions last so they are easy to find
