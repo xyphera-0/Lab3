@@ -45,8 +45,8 @@ int32_t PWM_left;
 uint8_t BMP0, BMP5;
 
 //paths
-uint16_t pathR[9] = {...};
-uint16_t pathI[9] = {...};
+uint16_t pathR[9] = {1.83,6705,.86,6705,.86,6705,.86,3129,1.30}; //odd are the distance, even are the angles
+uint16_t pathI[9] = {1.72,13410,.86,6705,1.83,6705,.86,13410,1.83}; //odd are the distance, even are the angles
 
 
 int main( void ) {    /** Main Function ****/
