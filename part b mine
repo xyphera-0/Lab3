@@ -231,6 +231,7 @@ void Driver(uint16_t * path_local){
             printf("straight\r\n");
             printf("u%\r\n", path_local[i]);
             uint16_t distance = ((count_right * 220)/360); // Calculate distance travelled in mm
+            Timer_A_setCompareValue(TIMER_A0_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_4,200);
             GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN6);
             GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN7);
             if(distance == path_local[i]){
