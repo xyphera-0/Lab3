@@ -45,13 +45,14 @@ int32_t PWM_left;
 uint8_t BMP0, BMP5;
 
 //paths
-uint16_t pathR[9] = {1.83,6705,.86,6705,.86,6705,.86,3129,1.30}; //odd are the distance, even are the angles
-uint16_t pathI[9] = {1.72,13410,.86,6705,1.83,6705,.86,13410,1.83}; //odd are the distance, even are the angles
+int16_t pathR[9] = {1.83,.117,.86,.117,.86,.117,.86,.055,1.30}; //odd are the distance, even are the angles
+int16_t pathI[9] = {1.72,.234,.86,.117,1.83,.117,.86,.234,1.83}; //odd are the distance, even are the angles
 
 
 int main( void ) {    /** Main Function ****/
   
     // Add local variables here as needed.
+
 
     // We always call the SysInit function first to set up the 
     // microcontroller for how we are going to use it.
@@ -221,9 +222,9 @@ void CCR_ISR() {
     }
 }
 
-void Driver(uint16_t path){
+void Driver(uint16_t * path_local){
     uint8_t i;
-    for(i=0; i <=9; i++) {
+    for(i=0; i <9; i++) {
         if((i==0) || ((i % 2) == 0) ){
             //distance needs to traveled
             //drive straight
@@ -232,6 +233,11 @@ void Driver(uint16_t path){
             //angle needed to turn
             //turn left wheel high
             printf("turn\r\n");
+            GPIO_setOutputLowOnPin(GPIO_PORT_P3, GPIO_PIN6);
+            GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN7);
+            Timer_A_setCompareValue(TIMER_A0_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_4,path_local[i]);
+
+
         }
     }
 }
