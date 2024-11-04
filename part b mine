@@ -45,8 +45,8 @@ int32_t PWM_left;
 uint8_t BMP0, BMP5;
 
 //paths
-int16_t pathR[9] = {1.83,.117,.86,.117,.86,.117,.86,.055,1.30}; //odd are the distance, even are the angles
-int16_t pathI[9] = {1.72,.234,.86,.117,1.83,.117,.86,.234,1.83}; //odd are the distance, even are the angles
+int16_t pathR[9] = {1830,117,860,117,860,117,860,055,1300}; //odd are the distance, even are the angles
+int16_t pathI[9] = {1720,234,860,117,1830,117,860,234,1830}; //odd are the distance, even are the angles
 
 
 int main( void ) {    /** Main Function ****/
@@ -229,6 +229,14 @@ void Driver(uint16_t * path_local){
             //distance needs to traveled
             //drive straight
             printf("straight\r\n");
+            printf("u%\r\n", path_local[i]);
+            uint16_t distance = ((count_right * 220)/360); // Calculate distance travelled in mm
+            GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN6);
+            GPIO_setOutputHighOnPin(GPIO_PORT_P3, GPIO_PIN7);
+            if(distance == path_local[i]){
+                GPIO_setOutputLowOnPin(GPIO_PORT_P3, GPIO_PIN6);
+                GPIO_setOutputLowOnPin(GPIO_PORT_P3, GPIO_PIN7);
+            }
         }else{
             //angle needed to turn
             //turn left wheel high
